@@ -1,0 +1,340 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{fancyhdr}
+
+\geometry{margin=2.5cm}
+
+% Colors
+\definecolor{graphqlpink}{RGB}{225,0,152}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{keywordcolor}{RGB}{0,0,180}
+\definecolor{stringcolor}{RGB}{163,21,21}
+\definecolor{commentcolor}{RGB}{0,128,0}
+
+% GraphQL listing style
+\lstdefinelanguage{GraphQL}{
+  keywords={type, input, enum, interface, union, scalar, query, mutation, subscription, fragment, on, true, false, null},
+  keywordstyle=\color{keywordcolor}\bfseries,
+  stringstyle=\color{stringcolor},
+  commentstyle=\color{commentcolor}\itshape,
+  morestring=[b]",
+  morecomment=[l]{\#},
+  sensitive=true
+}
+
+% TypeScript listing style
+\lstdefinelanguage{TypeScript}{
+  keywords={const, let, var, function, return, import, export, from, interface, type, extends, implements, class, new, async, await, true, false, null, undefined},
+  keywordstyle=\color{keywordcolor}\bfseries,
+  stringstyle=\color{stringcolor},
+  commentstyle=\color{commentcolor}\itshape,
+  morestring=[b]",
+  morestring=[b]',
+  morestring=[b]`,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  sensitive=true
+}
+
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray!40},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt,
+  tabsize=2,
+  showstringspaces=false,
+  xleftmargin=15pt
+}
+
+% Title formatting
+\titleformat{\section}{\large\bfseries\color{graphqlpink}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small Rapport Technique --- TP2 GraphQL}
+\lhead{\small Personne 1 --- Schéma GraphQL}
+\rfoot{\thepage}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=graphqlpink,
+  urlcolor=graphqlpink
+}
+
+% ─────────────────────────────────────────────
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\Huge\bfseries Rapport Technique\\[0.4em]
+  \color{graphqlpink} TP2 --- GraphQL\par}
+  \vspace{1.5cm}
+  {\large Personne 1 : Définition du Schéma GraphQL\\
+  Types, Relations \& Enum\par}
+  \vspace{1cm}
+  \rule{0.6\textwidth}{0.4pt}\\[1em]
+  {\normalsize
+    Module : Développement Web\\
+    Encadrant : Aymen Sellaouti\\
+    Date : \today
+  }
+  \vfill
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────
+\section{Stack Technique Choisie}
+
+\begin{center}
+\begin{tabular}{@{}lp{10cm}@{}}
+\toprule
+\textbf{Outil} & \textbf{Rôle} \\
+\midrule
+TypeScript    & Typage statique, évite les erreurs au runtime \\
+GraphQL Yoga  & Serveur GraphQL moderne, plus léger qu'Apollo, supporte nativement les Subscriptions via SSE \\
+Node.js HTTP  & Couche transport sous GraphQL Yoga \\
+Nodemon + ts-node & Rechargement automatique en développement \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ─────────────────────────────────────────────
+\section{Architecture du Projet}
+
+\begin{lstlisting}[language=bash, numbers=none, caption={Structure des dossiers}]
+src/
+├── schema/
+│   └── typeDefs.ts               <- Personne 1 (schéma GraphQL)
+├── data/
+│   └── db.ts                     <- Personne 2 (base de données fictive)
+├── context/
+│   └── context.ts                <- Personne 2 (configuration du context)
+├── resolvers/
+│   ├── index.ts                  <- point de fusion des resolvers
+│   ├── query/cvQueries.ts        <- Personne 3 (queries)
+│   ├── types/cvTypeResolvers.ts  <- Personne 4 (field resolvers)
+│   ├── mutation/cvMutations.ts   <- Personne 5 (mutations)
+│   └── subscription/cvSubscriptions.ts <- Personne 5 (subscriptions)
+└── server.ts                     <- point d'entrée du serveur
+\end{lstlisting}
+
+Le principe appliqué est la \textbf{séparation des responsabilités} : chaque fichier a un rôle unique et précis. C'est l'application du design pattern \textbf{Single Responsibility Principle}.
+
+% ─────────────────────────────────────────────
+\section{Fichier Principal --- \texttt{src/schema/typeDefs.ts}}
+
+C'est le cœur du travail de Personne 1. En GraphQL, les \texttt{typeDefs} définissent le \textbf{contrat de l'API} --- ce que le client peut demander et ce que le serveur s'engage à retourner. Tout est écrit en \textbf{SDL (Schema Definition Language)}.
+
+\subsection{3.1 --- \texttt{enum Role}}
+
+\begin{lstlisting}[language=GraphQL, caption={Définition de l'enum Role}]
+enum Role {
+  USER
+  ADMIN
+}
+\end{lstlisting}
+
+Un \texttt{enum} est un type dont la valeur est restreinte à une liste fixe. Ici \texttt{Role} ne peut valoir que \texttt{USER} ou \texttt{ADMIN}, jamais une autre chaîne de caractères. Le professeur l'a explicitement demandé dans le sujet (page 3). Sans enum, on utiliserait un \texttt{String} libre ce qui est moins sûr et moins expressif.
+
+\subsection{3.2 --- \texttt{type User}}
+
+\begin{lstlisting}[language=GraphQL, caption={Type User}]
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  role: Role!
+}
+\end{lstlisting}
+
+\begin{itemize}
+  \item \texttt{ID!} --- identifiant unique. Le \texttt{!} signifie \textbf{non-nullable} : toujours présent, jamais null.
+  \item \texttt{String!} --- chaîne de caractères obligatoire.
+  \item \texttt{role: Role!} --- utilise l'enum défini ci-dessus, obligatoire.
+\end{itemize}
+
+\subsection{3.3 --- \texttt{type Skill}}
+
+\begin{lstlisting}[language=GraphQL, caption={Type Skill}]
+type Skill {
+  id: ID!
+  designation: String!
+}
+\end{lstlisting}
+
+Type simple avec deux champs. \texttt{designation} correspond au nom du skill (ex: ``React'', ``Java'', ``Spring Boot'').
+
+\subsection{3.4 --- \texttt{type Cv} --- le type central avec ses relations}
+
+\begin{lstlisting}[language=GraphQL, caption={Type Cv avec relations}]
+type Cv {
+  id: ID!
+  name: String!
+  age: Int!
+  job: String!
+  user: User
+  skills: [Skill!]!
+}
+\end{lstlisting}
+
+C'est ici que les \textbf{relations du schéma UML sont traduites en GraphQL} :
+
+\begin{itemize}
+  \item \texttt{user: User} --- relation \textbf{many-to-one} : un CV appartient à un User. Nullable (pas de \texttt{!}) car un CV pourrait exister sans user assigné.
+  \item \texttt{skills: [Skill!]!} --- relation \textbf{many-to-many} : un CV possède plusieurs Skills. La double notation signifie : la liste elle-même est non-nullable (\texttt{!} extérieur) et chaque élément de la liste est également non-nullable (\texttt{!} intérieur dans \texttt{[Skill!]}).
+\end{itemize}
+
+\textbf{Point important :} dans la base de données (\texttt{db.ts}), le CV stockera \texttt{userId} et \texttt{skillIds} comme de simples IDs. C'est Personne 4 qui écrira les resolvers qui transformeront ces IDs en vrais objets \texttt{User} et \texttt{Skill} lors de la requête. Personne 1 définit uniquement le \textbf{contrat GraphQL visible par le client}.
+
+\subsection{3.5 --- \texttt{type Query}}
+
+\begin{lstlisting}[language=GraphQL, caption={Déclaration des Queries}]
+type Query {
+  cvs: [Cv!]!
+  cv(id: ID!): Cv
+}
+\end{lstlisting}
+
+\begin{itemize}
+  \item \texttt{cvs} --- retourne tous les CVs. La liste ne peut pas être null mais peut être vide.
+  \item \texttt{cv(id: ID!)} --- retourne un CV par son ID. Nullable car si l'ID n'existe pas, on retourne \texttt{null}.
+\end{itemize}
+
+Ces signatures définissent le contrat, mais les \textbf{implémentations} (la logique métier) sont réalisées par Personne 3 dans \texttt{cvQueries.ts}.
+
+\subsection{3.6 --- \texttt{input CreateCvInput} et \texttt{input UpdateCvInput}}
+
+\begin{lstlisting}[language=GraphQL, caption={Inputs pour les mutations}]
+input CreateCvInput {
+  name: String!
+  age: Int!
+  job: String!
+  userId: ID!
+  skillIds: [ID!]!
+}
+
+input UpdateCvInput {
+  name: String
+  age: Int
+  job: String
+  userId: ID
+  skillIds: [ID!]
+}
+\end{lstlisting}
+
+Un \texttt{input} est un type spécial utilisé uniquement pour \textbf{envoyer des données} au serveur (dans les mutations). Il ne peut pas contenir de fields résolus.
+
+Différence cruciale entre les deux :
+\begin{itemize}
+  \item \texttt{CreateCvInput} : tous les champs sont obligatoires (\texttt{!}) car pour créer un CV on a besoin de toutes les informations.
+  \item \texttt{UpdateCvInput} : tous les champs sont optionnels (sans \texttt{!}) car lors d'une mise à jour on ne modifie que ce que l'on souhaite.
+\end{itemize}
+
+Les IDs des relations (\texttt{userId}, \texttt{skillIds}) sont passés comme données brutes --- cohérent avec la base relationnelle non imbriquée demandée par le professeur.
+
+\subsection{3.7 --- \texttt{type Mutation}}
+
+\begin{lstlisting}[language=GraphQL, caption={Déclaration des Mutations}]
+type Mutation {
+  createCv(input: CreateCvInput!): Cv!
+  updateCv(id: ID!, input: UpdateCvInput!): Cv!
+  deleteCv(id: ID!): Boolean!
+}
+\end{lstlisting}
+
+\begin{itemize}
+  \item \texttt{createCv} --- prend un \texttt{CreateCvInput} et retourne le CV créé.
+  \item \texttt{updateCv} --- prend l'ID du CV à modifier ainsi que les nouvelles données, retourne le CV mis à jour.
+  \item \texttt{deleteCv} --- prend un ID, retourne un \texttt{Boolean} (\texttt{true} si supprimé, \texttt{false} sinon).
+\end{itemize}
+
+Ces stubs permettent au projet de compiler immédiatement. Personne 5 n'aura qu'à écrire les resolvers correspondants.
+
+\subsection{3.8 --- \texttt{type Subscription}}
+
+\begin{lstlisting}[language=GraphQL, caption={Déclaration de la Subscription}]
+type Subscription {
+  cvChanged: Cv!
+}
+\end{lstlisting}
+
+Une seule subscription \texttt{cvChanged} qui notifie à chaque ajout, modification ou suppression d'un CV. C'est le choix \textbf{économique en ressources} demandé page 6 du sujet : une subscription unique au lieu de trois (\texttt{cvAdded}, \texttt{cvUpdated}, \texttt{cvDeleted}) = moins de connexions ouvertes côté serveur. GraphQL Yoga utilise \textbf{SSE (Server-Sent Events)} au lieu de WebSockets, ce qui consomme encore moins de ressources.
+
+% ─────────────────────────────────────────────
+\section{Les Autres Fichiers (Structure)}
+
+\subsection{4.1 --- \texttt{src/server.ts}}
+
+\begin{lstlisting}[language=TypeScript, caption={Point d'entrée du serveur}]
+const yoga = createYoga({
+  schema: { typeDefs, resolvers } as any,
+  context: createContext,
+});
+const server = createServer(yoga);
+server.listen(4000, () => {
+  console.log('Server running at http://localhost:4000/graphql');
+});
+\end{lstlisting}
+
+GraphQL Yoga reçoit les \texttt{typeDefs} (travail de Personne 1), les \texttt{resolvers} (travail des autres membres) et le \texttt{context}. Il expose automatiquement une interface \textbf{GraphiQL} (interface de test interactive) sur \texttt{http://localhost:4000/graphql}.
+
+\subsection{4.2 --- \texttt{src/context/context.ts}}
+
+\begin{lstlisting}[language=TypeScript, caption={Configuration du Context}]
+export const createContext = (): AppContext => ({
+  db: { users, cvs, skills, cvSkills },
+});
+\end{lstlisting}
+
+Le context est un objet \textbf{injecté automatiquement dans chaque resolver}. Grâce à lui, tous les resolvers accèdent à la base de données sans import direct --- c'est le pattern recommandé en GraphQL pour éviter le couplage fort entre les resolvers et la source de données.
+
+\subsection{4.3 --- \texttt{src/resolvers/index.ts}}
+
+\begin{lstlisting}[language=TypeScript, caption={Fusion des resolvers}]
+export const resolvers = {
+  Query:        { ...cvQueries },
+  Mutation:     { ...cvMutations },
+  Subscription: { ...cvSubscriptions },
+  Cv:           { ...CvTypeResolvers },
+};
+\end{lstlisting}
+
+Fusionne tous les resolvers via le \textbf{spread operator}. Chaque membre de l'équipe ajoute ses resolvers dans son propre fichier, et \texttt{index.ts} les assemble sans conflit --- c'est le pattern \textbf{Resolver Map}.
+
+% ─────────────────────────────────────────────
+\section{Résumé des Décisions Techniques}
+
+\begin{center}
+\begin{tabular}{@{}lp{9cm}@{}}
+\toprule
+\textbf{Élément} & \textbf{Décision technique} \\
+\midrule
+\texttt{enum Role}       & Restreint les valeurs possibles, plus sûr qu'un \texttt{String} libre \\
+Relations dans \texttt{Cv} & Définies en GraphQL (\texttt{user}, \texttt{skills}), séparées des données brutes en DB \\
+\texttt{[Skill!]!}       & Double non-nullable : ni la liste ni ses éléments ne peuvent être null \\
+\texttt{input} séparés   & \texttt{Create} vs \texttt{Update} avec champs requis/optionnels selon le contexte \\
+\texttt{cvChanged} unique & Une seule subscription pour 3 événements = économie de ressources \\
+SSE via GraphQL Yoga     & Plus léger que WebSockets, répond à l'exigence page 6 du sujet \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}
