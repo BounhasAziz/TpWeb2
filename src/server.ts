@@ -2,10 +2,12 @@ import { createServer } from 'node:http';
 import { createSchema, createYoga } from 'graphql-yoga';
 import { typeDefs } from './schema/typeDefs';
 import { resolvers } from './resolvers';
-import { createContext } from './context/context';
+import { createContext, AppContext } from './context/context';
 
-const yoga = createYoga({
-  schema: createSchema({ typeDefs, resolvers }),
+const schema = createSchema<AppContext>({ typeDefs, resolvers });
+
+const yoga = createYoga<AppContext>({
+  schema,
   context: createContext,
 });
 

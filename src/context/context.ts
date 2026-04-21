@@ -1,12 +1,12 @@
-// Personne 2 — Context configuration
 import { users, cvs, skills, cvSkills } from '../data/db';
+import type { UserRecord, CvRecord, SkillRecord, CvSkillRecord } from '../data/db';
 
 export interface AppContext {
   db: {
-    users: typeof users;
-    cvs: typeof cvs;
-    skills: typeof skills;
-    cvSkills: typeof cvSkills;
+    users: UserRecord[];
+    cvs: CvRecord[];
+    skills: SkillRecord[];
+    cvSkills: CvSkillRecord[];
   };
 }
 
