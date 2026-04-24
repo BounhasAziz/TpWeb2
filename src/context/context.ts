@@ -1,23 +1,19 @@
 import { createPubSub } from 'graphql-yoga';
-import { users, cvs, skills, cvSkills } from '../data/db';
-import type { UserRecord, CvRecord, SkillRecord, CvSkillRecord } from '../data/db';
+import { PrismaClient } from '../generated/prisma/client';
+import type { Cv } from '../generated/prisma/client';
+import { prisma } from '../lib/prisma';
 import { EVENTS } from '../constants/pubsubEvents';
 
-export type AppPubSub = ReturnType<typeof createPubSub<{ [EVENTS.CV_CHANGED]: [cv: CvRecord] }>>;
+export type AppPubSub = ReturnType<typeof createPubSub<{ [EVENTS.CV_CHANGED]: [cv: Cv] }>>;
 
-export const pubSub: AppPubSub = createPubSub<{ [EVENTS.CV_CHANGED]: [cv: CvRecord] }>();
+export const pubSub: AppPubSub = createPubSub<{ [EVENTS.CV_CHANGED]: [cv: Cv] }>();
 
 export interface AppContext {
-  db: {
-    users: UserRecord[];
-    cvs: CvRecord[];
-    skills: SkillRecord[];
-    cvSkills: CvSkillRecord[];
-  };
+  prisma: PrismaClient;
   pubSub: AppPubSub;
 }
 
 export const createContext = (): AppContext => ({
-  db: { users, cvs, skills, cvSkills },
+  prisma,
   pubSub,
 });

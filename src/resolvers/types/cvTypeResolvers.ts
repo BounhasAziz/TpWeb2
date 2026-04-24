@@ -1,16 +1,11 @@
-// Personne 4 — Field resolvers for Cv type (user, skills)
 import { AppContext } from '../../context/context';
-import type { CvRecord } from '../../data/db';
+import type { Cv } from '../../generated/prisma/client';
 
 export const CvTypeResolvers = {
-  user: (parent: CvRecord, _args: unknown, context: AppContext) => {
-    return context.db.users.find((user) => user.id === parent.userId) ?? null;
+  user: (parent: Cv, _args: unknown, context: AppContext) => {
+    return context.prisma.user.findUnique({ where: { id: parent.userId } });
   },
-  skills: (parent: CvRecord, _args: unknown, context: AppContext) => {
-    const relatedSkillIds = context.db.cvSkills
-      .filter((link) => link.cvId === parent.id)
-      .map((link) => link.skillId);
-
-    return context.db.skills.filter((skill) => relatedSkillIds.includes(skill.id));
+  skills: (parent: Cv, _args: unknown, context: AppContext) => {
+    return context.prisma.skill.findMany({ where: { cvs: { some: { id: parent.id } } } });
   },
 };
