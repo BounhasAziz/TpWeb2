@@ -1,4 +1,5 @@
 node_modules/
 dist/
 .env
+*.db
 design_patterns.md
